@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -17,10 +18,36 @@ type Entry struct {
 	LastAccess string
 }
 
+type PhoneBook []Entry
+var data = PhoneBook{}
+
+// Implement sort.Interface
+func (a PhoneBook) Len() int {
+	return len(a)
+}
+
+// First based on surname. If theu have the same surname take into account name.
+func (a PhoneBook) Less(i, j int) bool {
+	if a[i].Surname == a[j].Surname {
+		return a[i].Name < a[j].Name
+	}
+	return a[i].Surname < a[j].Surname
+}
+
+func (a PhoneBook) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func list() {
+	sort.Sort(PhoneBook(data))
+	for _, v := range data {
+		fmt.Println(v)
+	}
+}
 // CSVFILE path
 var CSVFILE = "/tmp/csv.data"
 
-var data = []Entry{}
+// var data = []Entry{}
 var index map[string]int
 
 func readCSVFile(filepath string) error {
@@ -134,16 +161,33 @@ func search(key string) *Entry {
 	return &data[i]
 }
 
-func list() {
-	for _, v := range data {
-		fmt.Println(v)
-	}
-}
-
 func matchTel(s string) bool {
 	t := []byte(s)
 	re := regexp.MustCompile(`\d+$`)
 	return re.Match(t)
+}
+
+func setCSVFILE() error {
+	filepath := os.Getenv("PHONEBOOK")
+	if filepath != "" {
+		CSVFILE = filepath
+	}
+	_, err := os.Stat(CSVFILE)
+	if err != nil {
+		fmt.Println("Creating", CSVFILE)
+		f, err := os.Create(CSVFILE)
+		if err != nil {
+			f.Close()
+			return err
+		}
+		f.Close()
+	}
+	fileInfo, err := os.Stat(CSVFILE)
+	mode := fileInfo.Mode()
+	if !mode.IsRegular() {
+		return fmt.Errorf("%s not a regular file", CSVFILE)
+	}
+	return nil
 }
 
 func main() {
@@ -153,24 +197,9 @@ func main() {
 		return
 	}
 
-	// If the CSVFILE does not exist, create an empty one
-	_, err := os.Stat(CSVFILE)
-	// If error is not nil, it means that the file does not exist
+	err := setCSVFILE()
 	if err != nil {
-		fmt.Println("Creating", CSVFILE)
-		f, err := os.Create(CSVFILE)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		f.Close()
-	}
-
-	fileInfo, err := os.Stat(CSVFILE)
-	// Is it a regular file?
-	mode := fileInfo.Mode()
-	if !mode.IsRegular() {
-		fmt.Println(CSVFILE, "not a regular file!")
+		fmt.Println(err)
 		return
 	}
 
