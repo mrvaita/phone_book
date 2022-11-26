@@ -3,11 +3,10 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"net/http"
 	"os"
 	"regexp"
-	"sort"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -19,6 +18,7 @@ type Entry struct {
 }
 
 type PhoneBook []Entry
+
 var data = PhoneBook{}
 
 // Implement sort.Interface
@@ -38,12 +38,14 @@ func (a PhoneBook) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 
-func list() {
-	sort.Sort(PhoneBook(data))
-	for _, v := range data {
-		fmt.Println(v)
+func list() string {
+	var all string
+	for _, k := range data {
+		all = all + k.Name + " " + k.Surname + " " + k.Tel + "\n"
 	}
+	return all
 }
+
 // CSVFILE path
 var CSVFILE = "/tmp/csv.data"
 
@@ -191,19 +193,7 @@ func setCSVFILE() error {
 }
 
 func main() {
-	arguments := os.Args
-	if len(arguments) == 1 {
-		fmt.Println("Usage: insert|delete|search|list <arguments>")
-		return
-	}
-
-	err := setCSVFILE()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	err = readCSVFile(CSVFILE)
+	err := readCSVFile(CSVFILE)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -215,60 +205,27 @@ func main() {
 		return
 	}
 
-	// Differentiating between the commands
-	switch arguments[1] {
-	case "insert":
-		if len(arguments) != 5 {
-			fmt.Println("Usage: insert Name Surname Telephone")
-			return
-		}
-		t := strings.ReplaceAll(arguments[4], "-", "")
-		if !matchTel(t) {
-			fmt.Println("Not a valid telephone number:", t)
-			return
-		}
-		temp := initS(arguments[2], arguments[3], t)
-		// If it was nil, there was an error
-		if temp != nil {
-			err := insert(temp)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-		}
-	case "delete":
-		if len(arguments) != 3 {
-			fmt.Println("Usage: delete Number")
-			return
-		}
-		t := strings.ReplaceAll(arguments[2], "-", "")
-		if !matchTel(t) {
-			fmt.Println("Not a valid telephone number:", t)
-			return
-		}
-		err := deleteEntry(t)
-		if err != nil {
-			fmt.Println(err)
-		}
-	case "search":
-		if len(arguments) != 3 {
-			fmt.Println("Usage: search Number")
-			return
-		}
-		t := strings.ReplaceAll(arguments[2], "-", "")
-		if !matchTel(t) {
-			fmt.Println("Not a valid telephone number:", t)
-			return
-		}
-		temp := search(t)
-		if temp == nil {
-			fmt.Println("Number not found:", t)
-			return
-		}
-		fmt.Println(*temp)
-	case "list":
-		list()
-	default:
-		fmt.Println("Not a valid option")
+	mux := http.NewServeMux()
+	s := &http.Server{
+		Addr:         PORT,
+		Handler:      mux,
+		IdleTimeout:  10 * time.Second,
+		ReadTimeout:  time.Second,
+		WriteTimeout: time.Second,
+	}
+	mux.Handle("/list", http.HandlerFunc(listHandler))
+	mux.Handle("/insert/", http.HandlerFunc(insertHandler))
+	mux.Handle("/insert", http.HandlerFunc(insertHandler))
+	mux.Handle("/search", http.HandlerFunc(searchHandler))
+	mux.Handle("/search/", http.HandlerFunc(searchHandler))
+	mux.Handle("/delete", http.HandlerFunc(deleteHandler))
+	mux.Handle("/status", http.HandlerFunc(statusHandler))
+	mux.Handle("/", http.HandlerFunc(defaultHandler))
+
+	fmt.Println("Ready to serve at", PORT)
+	err = s.ListenAndServe()
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 }
