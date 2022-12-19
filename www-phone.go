@@ -219,6 +219,7 @@ func main() {
 	mux.Handle("/search", http.HandlerFunc(searchHandler))
 	mux.Handle("/search/", http.HandlerFunc(searchHandler))
 	mux.Handle("/delete", http.HandlerFunc(deleteHandler))
+	mux.Handle("/delete/", http.HandlerFunc(deleteHandler))
 	mux.Handle("/status", http.HandlerFunc(statusHandler))
 	mux.Handle("/", http.HandlerFunc(defaultHandler))
 

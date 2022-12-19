@@ -37,7 +37,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Body := telephone + "deleted!\n"
+	Body := telephone + " deleted!\n"
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "%s", Body)
 }
