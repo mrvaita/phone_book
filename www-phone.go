@@ -206,13 +206,13 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	s := &http.Server{
-		Addr:         PORT,
-		Handler:      mux,
-		IdleTimeout:  10 * time.Second,
-		ReadTimeout:  time.Second,
-		WriteTimeout: time.Second,
-	}
+	// s := &http.Server{
+	// 	Addr:         PORT,
+	// 	Handler:      mux,
+	// 	IdleTimeout:  10 * time.Second,
+	// 	ReadTimeout:  10 * time.Second,
+	// 	WriteTimeout: 10 * time.Second,
+	// }
 	mux.Handle("/list", http.HandlerFunc(listHandler))
 	mux.Handle("/insert/", http.HandlerFunc(insertHandler))
 	mux.Handle("/insert", http.HandlerFunc(insertHandler))
@@ -221,10 +221,13 @@ func main() {
 	mux.Handle("/delete", http.HandlerFunc(deleteHandler))
 	mux.Handle("/delete/", http.HandlerFunc(deleteHandler))
 	mux.Handle("/status", http.HandlerFunc(statusHandler))
+	// mux.HandleFunc("/getContents/", getFileHandler)  // slight different way to do the same thing
+	mux.Handle("/getContents/", http.HandlerFunc(getFileHandler))  // slight different way to do the same thing
 	mux.Handle("/", http.HandlerFunc(defaultHandler))
 
 	fmt.Println("Ready to serve at", PORT)
-	err = s.ListenAndServe()
+	// err = s.ListenAndServe()
+	err = http.ListenAndServe(PORT, mux)
 	if err != nil {
 		fmt.Println(err)
 		return

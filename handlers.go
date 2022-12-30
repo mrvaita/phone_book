@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 )
 
 const PORT = ":1234"
@@ -115,4 +117,34 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
 	fmt.Fprintf(w, "%s", Body)
+}
+
+func getFileHandler(w http.ResponseWriter, r *http.Request) {
+	var tmpFileName string
+
+	//create temporary file name
+	f, err := os.CreateTemp("", "data*.txt")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	tmpFileName = f.Name()
+
+	defer os.Remove(tmpFileName)
+
+	// Save data to file
+	err = saveCSVFile(tmpFileName)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintln(w, "Cannot create: " + tmpFileName)
+		return
+	}
+
+	fmt.Println("Serving: ", tmpFileName)
+
+	http.ServeFile(w, r, tmpFileName)
+
+	// Sleep few seconds to get the file
+	time.Sleep(10 * time.Second)
 }
